@@ -1,0 +1,184 @@
+#include <iostream>
+#include <raylib.h>
+
+using namespace std;
+
+int player_score = 0;
+int cpu_score = 0;
+Color Green= Color{38,185,154,255};
+Color Dark_Green = Color{20, 160, 133,255};
+Color Light_Green= Color{129,204,184,255};
+Color Yellow= Color{243,213,91,255};
+
+
+class Ball{
+    public:
+    float x,y;
+    int speed_x,speed_y;
+    int radius;
+
+    Ball(float startX, float startY, int speedX, int speedY, int r) {
+        x = startX;
+        y = startY;
+        speed_x = speedX;
+        speed_y = speedY;
+        radius = r;
+    }
+
+    void Draw()
+    {
+        DrawCircle(x,y,radius,Yellow);
+    }
+
+    void Update()
+    {
+        x = x +  speed_x;
+        y = y + speed_y;
+
+        if(y+radius > GetScreenHeight() || y-radius < 0){
+            speed_y *=-1;
+        }
+        if (x+radius > GetScreenWidth() )
+        {
+            cpu_score++;
+            ResetBall();
+            
+        }
+        if( x-radius < 0){
+            player_score++;
+            ResetBall();
+        }
+    }
+    void ResetBall()
+    {
+        x = GetScreenWidth()/2;
+        y = GetScreenHeight()/2;
+
+        int speed_choices[2] = {-1,1};
+        speed_x *= speed_choices[(GetRandomValue(0,1))];
+        speed_y *= speed_choices[(GetRandomValue(0,1))];
+
+    }
+    
+};
+
+class Paddle{
+    protected:
+    void LimitMovement()
+    {
+        if(y<=0)
+        {
+            y=0;
+        }
+        if(y+height >=GetScreenHeight())
+        {
+            y=GetScreenHeight()-height;
+        }
+    }
+    public:
+    float x,y;
+    float width,height;
+    int speed;
+
+    void Draw()
+    {
+        DrawRectangleRounded(Rectangle{x,y,width,height},0.8,0,WHITE);
+    }
+
+    void Update()
+    {
+        if(IsKeyDown(KEY_DOWN))
+        {
+            y += speed;
+        }
+        if(IsKeyDown(KEY_UP))
+        {
+            y -= speed;
+        }
+        LimitMovement();
+    }
+};
+
+class CPU_Paddle : public Paddle{
+    public:
+
+    void Update(int ball_y)
+    {
+        if( y + height/2 > ball_y)
+        {
+            y -= speed;
+        }
+        if( y + height/2 < ball_y)
+        {
+            y += speed;
+        }
+        LimitMovement();
+    }
+
+
+};
+
+int main () {
+  
+
+    const static int screenWidth = 800;
+    const static int screenHeight = 600;
+   
+    InitWindow(screenWidth,screenHeight,"MY PONG GAME");
+    SetTargetFPS(60);
+
+    Ball ball(screenWidth / 2, screenHeight / 2, 5, 5, 10);
+    Paddle player;
+    CPU_Paddle CPU;
+    player.width = 15;
+    player.height = 100;
+    player.x=screenWidth-player.width-10;
+    player.y= screenHeight/2-player.height/2;
+    player.speed = 6;
+
+    CPU.width = 15;
+    CPU.height = 100;
+    CPU.x=10;
+    CPU.y= screenHeight/2-CPU.height/2;
+    CPU.speed = 4;
+
+
+    while(WindowShouldClose()== false)
+    {
+        BeginDrawing();
+        //Update 
+        ball.Update();
+        player.Update();
+        CPU.Update(ball.y);
+
+        //Collision check
+        if(CheckCollisionCircleRec(Vector2 {ball.x,ball.y},ball.radius,Rectangle{player.x,player.y,player.width,player.height}))
+        {
+            ball.speed_x *= -1;
+        }
+        if(CheckCollisionCircleRec(Vector2 {ball.x,ball.y},ball.radius,Rectangle{CPU.x,CPU.y,CPU.width,CPU.height}))
+        {
+            ball.speed_x *= -1 ;
+        }
+
+        //Drawing
+        ClearBackground(Dark_Green);
+        DrawRectangle(screenWidth/2,0,screenWidth/2,screenHeight,Green);
+        DrawCircle(screenWidth/2,screenHeight/2,130,Light_Green);
+        DrawLine(screenWidth/2,0,screenWidth/2,screenHeight,WHITE);
+        ball.Draw();
+        CPU.Draw();// as the PosY is the top corner of the rectangle in order to centre the rectangle we bring the rectangle up by rectangle length/2. 
+        player.Draw();
+        DrawText(TextFormat("%i",cpu_score),screenWidth/4-20,20,50,WHITE);
+        DrawText(TextFormat("%i",player_score),screenWidth*3/4-20,20,50,WHITE);
+
+        EndDrawing();
+    }
+
+
+    CloseWindow();
+
+}
+
+
+   
